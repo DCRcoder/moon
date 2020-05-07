@@ -10,14 +10,13 @@ extern crate slog_term;
 use slog::Drain;
 
 pub mod cfg;
-pub mod moon;
-pub mod error;
 pub mod consts;
+pub mod error;
+pub mod moon;
 
 extern crate dirs;
 #[macro_use]
 extern crate log;
-
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "basic")]
@@ -57,15 +56,13 @@ struct Opt {
     // /// depri|dp ITEM#[, ITEM#, ITEM#, ...]
     // #[structopt(long)]
     // depri: String,
+    /// done|do ITEM#[, ITEM#, ITEM#, ...]
+    #[structopt(long)]
+    done: Option<String>,
 
-    // /// done|do ITEM#[, ITEM#, ITEM#, ...]
-    // #[structopt(long)]
-    // done: String,
-
-    // /// list|ls [TERM...]
-    // #[structopt(long)]
-    // list: String,
-
+    /// list|ls [TERM...]
+    #[structopt(long)]
+    list: Option<String>,
     // /// listaddons
     // #[structopt(long)]
     // listaddons: String,
@@ -119,17 +116,25 @@ fn main() {
     let current_home_dir = dirs::home_dir().unwrap();
     let cfg = cfg::Config::new(current_home_dir);
     info!("config:{:?}", cfg);
-    let mut m = moon::Moon::new(cfg).unwrap();
+    let m = moon::Moon::new(cfg);
 
-    let opt = Opt::from_args();
-    match opt.add {
-        None => info!("add get nothing"),
-        Some(add) => {
-            let a = m.add(&add);
-            match a {
-                Ok(_) => info!("[add action successful]: todo:{}", &add),
-                Err(e) => error!("error:{:?}", e)
+    match m {
+        Ok(mut m) => {
+            let opt = Opt::from_args();
+            match opt.add {
+                None => info!("add get nothing"),
+                Some(add) => {
+                    let a = m.add(&add);
+                    match a {
+                        Ok(s) => info!("[add action successful]: todo:{} position:{}", &add, s),
+                        Err(e) => error!("error:{:?}", e),
+                    }
+                }
             }
         }
-    }
-}
+        Err(e) => {
+            error!("moon init error: {:?}", e)
+        }
+    }}
+
+

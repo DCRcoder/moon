@@ -1,12 +1,12 @@
 use crate::cfg::Config;
+use crate::consts::{CREATED_AT, DEFAULT_TODO_PRI_LEVEL, TODO_MESSAGE, TODO_PRI};
 use crate::error::Result;
-use crate::consts::{TODO_MESSAGE, CREATED_AT, TODO_PRI, DEFAULT_TODO_PRI_LEVEL};
+use std::collections::BTreeMap;
 use std::fs::{File, OpenOptions};
-use std::io::{self, BufWriter, Seek, SeekFrom, Write};
+use std::io::{self, BufRead, BufReader, BufWriter, Read, Seek, SeekFrom, Write};
 extern crate chrono;
 
 use chrono::prelude::*;
-
 
 struct BufWriterWithPos<W: Write + Seek> {
     writer: BufWriter<W>,
@@ -42,14 +42,14 @@ impl<W: Write + Seek> Seek for BufWriterWithPos<W> {
     }
 }
 
-
 pub struct Moon {
     pub config: Config,
     todo_writer: BufWriterWithPos<File>,
+    line_count: u64,
 }
 
 impl Moon {
-    pub fn new(cfg :Config) -> Result<Moon> {
+    pub fn new(cfg: Config) -> Result<Moon> {
         let writer = BufWriterWithPos::new(
             OpenOptions::new()
                 .create(true)
@@ -57,16 +57,36 @@ impl Moon {
                 .append(true)
                 .open(&cfg.todo_file)?,
         )?;
-        return Ok(Moon{
-            config: cfg,
+        let reader = BufReader::new(OpenOptions::new()
+                .read(true)
+                .open(&cfg.todo_file)?
+        );
+        let mut line_count: u64 = 0;
+        for (_, line) in reader.lines().enumerate() {
+            match line {
+                Ok(_) => {
+                    line_count += 1;
+                }
+                Err(e) => {
+                    error!("read error: {:?}", e)
+                }
+            }
+        };
+        info!("line_count:{:?}", line_count);
+        return Ok(Moon {
             todo_writer: writer,
-        })
+            line_count: line_count,
+            config: cfg,
+        });
     }
 
     pub fn add(&mut self, todo: &str) -> io::Result<usize> {
         let local: DateTime<Local> = Local::now();
         let now = local.format("%Y-%m-%d %H:%M:%S").to_string();
-        let t = format!("{}:{}|{}:{}|{}:{}\n", TODO_PRI, DEFAULT_TODO_PRI_LEVEL, TODO_MESSAGE, todo, CREATED_AT, now);
+        let t = format!(
+            "{}:{}|{}:{}|{}:{}\n",
+            TODO_PRI, DEFAULT_TODO_PRI_LEVEL, TODO_MESSAGE, todo, CREATED_AT, now
+        );
         return self.todo_writer.write(t.as_bytes());
     }
 }

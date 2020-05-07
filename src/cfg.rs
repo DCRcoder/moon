@@ -1,13 +1,13 @@
-use std::path::PathBuf;
 use std::fs;
+use std::path::PathBuf;
 
 static ROOT_DIR_NAME: &str = ".moon";
 static TODO_FILE: &str = ".todo.txt";
 static DONE_FILE: &str = ".done.txt";
 
-#[derive(PartialEq, Debug, Clone)]
-pub struct Config{
-    pub root_dir: PathBuf, 
+#[derive(Debug, Clone)]
+pub struct Config {
+    pub root_dir: PathBuf,
     pub todo_file: PathBuf,
     pub done_file: PathBuf,
 }
@@ -26,10 +26,10 @@ impl Config {
         if !done_file.exists() {
             fs::File::create(&done_file).unwrap();
         }
-        return Config{
+        return Config {
             root_dir: home_dir,
             todo_file: todo_file,
             done_file: done_file,
-        }
+        };
     }
 }
