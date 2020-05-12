@@ -26,8 +26,8 @@ struct Opt {
     add: Option<String>,
 
     /// addm "THINGS I NEED TO DO MORE THINGS I NEED TO DO"
-    #[structopt(long)]
-    addm: Option<String>,
+    // #[structopt(long)]
+    // addm: Option<String>,
 
     // /// addto DEST "TEXT TO ADD"
     // #[structopt(long)]
@@ -49,9 +49,9 @@ struct Opt {
     // #[structopt(long)]
     // deduplicate: String,
 
-    // /// del|rm ITEM# [TERM]
-    // #[structopt(long)]
-    // del: String,
+    /// del|rm ITEM# [TERM]
+    #[structopt(long)]
+    del: Option<String>,
 
     // /// depri|dp ITEM#[, ITEM#, ITEM#, ...]
     // #[structopt(long)]
@@ -122,13 +122,19 @@ fn main() {
         Ok(mut m) => {
             let opt = Opt::from_args();
             match opt.add {
-                None => info!("add get nothing"),
+                None => (),
                 Some(add) => {
                     let a = m.add(&add);
                     match a {
-                        Ok(s) => info!("[add action successful]: todo:{} position:{}", &add, s),
+                        Ok(s) => info!("[add action successful]: {} todo:{} position:{}", m.line_count ,&add, s),
                         Err(e) => error!("error:{:?}", e),
                     }
+                }
+            }
+            match opt.list {
+                None => (),
+                Some(_) => {
+                    m.list();
                 }
             }
         }

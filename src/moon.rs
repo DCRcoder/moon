@@ -45,7 +45,8 @@ impl<W: Write + Seek> Seek for BufWriterWithPos<W> {
 pub struct Moon {
     pub config: Config,
     todo_writer: BufWriterWithPos<File>,
-    line_count: u64,
+    pub line_count: u64,
+    index_map: BTreeMap<u64, u64>,
 }
 
 impl Moon {
@@ -62,7 +63,8 @@ impl Moon {
                 .open(&cfg.todo_file)?
         );
         let mut line_count: u64 = 0;
-        for (_, line) in reader.lines().enumerate() {
+        let index_map = BTreeMap::new();
+        for (idx, line) in reader.lines().enumerate() {
             match line {
                 Ok(_) => {
                     line_count += 1;
@@ -72,11 +74,11 @@ impl Moon {
                 }
             }
         };
-        info!("line_count:{:?}", line_count);
         return Ok(Moon {
             todo_writer: writer,
             line_count: line_count,
             config: cfg,
+            index_map: index_map
         });
     }
 
@@ -88,5 +90,22 @@ impl Moon {
             TODO_PRI, DEFAULT_TODO_PRI_LEVEL, TODO_MESSAGE, todo, CREATED_AT, now
         );
         return self.todo_writer.write(t.as_bytes());
+    }
+
+    pub fn list(&mut self) {
+        let reader =  BufReader::new(OpenOptions::new()
+        .read(true)
+        .open(&self.config.todo_file).unwrap()
+        );
+        for (idx, line) in reader.lines().enumerate() {
+            match line {
+                Ok(line) => {
+                    println!("{} todo_content: {}", idx + 1, line)
+                }
+                Err(e) => {
+                    error!("read error: {:?}", e)
+                }
+            }
+        };
     }
 }
