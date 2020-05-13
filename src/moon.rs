@@ -128,15 +128,8 @@ impl Moon {
             return 
         };
         reader.seek(SeekFrom::Start(*start_pos + 1));
-        for line in reader.lines() {
-            match line {
-                Ok(line) => {
-                    println!("del line: {}", line);
-                }
-                Err(e) => {
-                    error!("{:?}", e);
-                }
-            }
-        }
+        let mut todo = String::new();
+        reader.read_line(&mut todo);
+        println!("todo content:{}", todo);
     }
 }
