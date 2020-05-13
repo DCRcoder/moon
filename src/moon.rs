@@ -3,7 +3,7 @@ use crate::consts::{CREATED_AT, DEFAULT_TODO_PRI_LEVEL, TODO_MESSAGE, TODO_PRI};
 use crate::error::Result;
 use std::collections::BTreeMap;
 use std::fs::{File, OpenOptions};
-use std::io::{self, BufRead, BufReader, BufWriter, Read, Seek, SeekFrom, Write};
+use std::io::{self, BufRead, BufReader, BufWriter, LineWriter, Seek, SeekFrom, Write};
 extern crate chrono;
 
 use chrono::prelude::*;
@@ -63,11 +63,14 @@ impl Moon {
                 .open(&cfg.todo_file)?
         );
         let mut line_count: u64 = 0;
-        let index_map = BTreeMap::new();
-        for (idx, line) in reader.lines().enumerate() {
+        let mut index_map = BTreeMap::new();
+        let mut pos:u64 = 0;
+        for line in reader.lines() {
             match line {
-                Ok(_) => {
+                Ok(line) => {
                     line_count += 1;
+                    index_map.insert(line_count, pos);
+                    pos += line.len() as u64;
                 }
                 Err(e) => {
                     error!("read error: {:?}", e)
@@ -85,9 +88,10 @@ impl Moon {
     pub fn add(&mut self, todo: &str) -> io::Result<usize> {
         let local: DateTime<Local> = Local::now();
         let now = local.format("%Y-%m-%d %H:%M:%S").to_string();
+        let content = todo.replace("\n", "");
         let t = format!(
             "{}:{}|{}:{}|{}:{}\n",
-            TODO_PRI, DEFAULT_TODO_PRI_LEVEL, TODO_MESSAGE, todo, CREATED_AT, now
+            TODO_PRI, DEFAULT_TODO_PRI_LEVEL, TODO_MESSAGE, content, CREATED_AT, now
         );
         return self.todo_writer.write(t.as_bytes());
     }
@@ -97,15 +101,42 @@ impl Moon {
         .read(true)
         .open(&self.config.todo_file).unwrap()
         );
-        for (idx, line) in reader.lines().enumerate() {
+
+        let mut idx = 1;
+        for line in reader.lines() {
             match line {
                 Ok(line) => {
-                    println!("{} todo_content: {}", idx + 1, line)
+                    println!("{} todo_content: {}, len:{}:", idx, line, line.len());
+                    idx += 1;
                 }
                 Err(e) => {
                     error!("read error: {:?}", e)
                 }
             }
         };
+        println!("index_map:{:?}", self.index_map)
+    }
+
+    pub fn del(&mut self, line_num: u64) {
+        let mut reader =  BufReader::new(OpenOptions::new()
+        .read(true)
+        .open(&self.config.todo_file).unwrap()
+        );
+        let start_pos = self.index_map.get(&line_num).unwrap_or(&0);
+        let end_pos = self.index_map.get(&(line_num + 1)).unwrap_or(&0);
+        if start_pos == &0 || end_pos == &0 {
+            return 
+        };
+        reader.seek(SeekFrom::Start(*start_pos + 1));
+        for line in reader.lines() {
+            match line {
+                Ok(line) => {
+                    println!("del line: {}", line);
+                }
+                Err(e) => {
+                    error!("{:?}", e);
+                }
+            }
+        }
     }
 }

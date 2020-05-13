@@ -124,17 +124,20 @@ fn main() {
             match opt.add {
                 None => (),
                 Some(add) => {
-                    let a = m.add(&add);
-                    match a {
-                        Ok(s) => info!("[add action successful]: {} todo:{} position:{}", m.line_count ,&add, s),
-                        Err(e) => error!("error:{:?}", e),
-                    }
+                    m.add(&add);
                 }
             }
             match opt.list {
                 None => (),
                 Some(_) => {
                     m.list();
+                }
+            }
+            
+            match opt.del {
+                None => (),
+                Some(_) => {
+                    m.del(2)
                 }
             }
         }
