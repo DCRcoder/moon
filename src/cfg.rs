@@ -1,9 +1,9 @@
 use std::fs;
 use std::path::PathBuf;
 
-static ROOT_DIR_NAME: &str = ".moon";
-static TODO_FILE: &str = ".todo.txt";
-static DONE_FILE: &str = ".done.txt";
+pub static ROOT_DIR_NAME: &str = ".moon";
+pub static TODO_FILE: &str = ".todo.txt";
+pub static DONE_FILE: &str = ".done.txt";
 
 #[derive(Debug, Clone)]
 pub struct Config {
@@ -31,17 +31,5 @@ impl Config {
             todo_file: todo_file,
             done_file: done_file,
         };
-    }
-
-    pub fn set_bak(&mut self, mut file_path: PathBuf) {
-        file_path.set_file_name((TODO_FILE.to_owned() + ".bak"));
-    }
-
-    pub fn set_bak_recover(&mut self, file_path: PathBuf) {
-        let bak = file_path.join(".bak");
-        let r = fs::rename(bak, file_path);
-        if r.is_err() {
-            error!("[Config set_bak] error:{:?}", r.err());}
-        
     }
 }

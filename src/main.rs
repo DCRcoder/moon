@@ -133,7 +133,7 @@ fn main() {
                     m.list();
                 }
             }
-            
+
             match opt.del {
                 None => (),
                 Some(p) => {
@@ -142,9 +142,6 @@ fn main() {
                 }
             }
         }
-        Err(e) => {
-            error!("moon init error: {:?}", e)
-        }
-    }}
-
-
+        Err(e) => error!("moon init error: {:?}", e),
+    }
+}

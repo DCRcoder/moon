@@ -1,10 +1,11 @@
-use crate::cfg::Config;
+use crate::cfg::{Config, TODO_FILE};
 use crate::consts::{CREATED_AT, DEFAULT_TODO_PRI_LEVEL, TODO_MESSAGE, TODO_PRI};
 use crate::error::Result;
 use std::collections::BTreeMap;
-use std::str;
 use std::fs::{File, OpenOptions};
-use std::io::{self, BufRead, BufReader, BufWriter, Read, Seek, SeekFrom, Write};
+use std::io::{self, BufRead, BufReader, BufWriter, LineWriter, Seek, SeekFrom, Write};
+use std::path::PathBuf;
+use std::str;
 extern crate chrono;
 
 use chrono::prelude::*;
@@ -59,13 +60,10 @@ impl Moon {
                 .append(true)
                 .open(&cfg.todo_file)?,
         )?;
-        let reader = BufReader::new(OpenOptions::new()
-                .read(true)
-                .open(&cfg.todo_file)?
-        );
+        let reader = BufReader::new(OpenOptions::new().read(true).open(&cfg.todo_file)?);
         let mut line_count: u64 = 0;
         let mut index_map = BTreeMap::new();
-        let mut pos:u64 = 0;
+        let mut pos: u64 = 0;
         for line in reader.lines() {
             match line {
                 Ok(line) => {
@@ -73,16 +71,14 @@ impl Moon {
                     index_map.insert(line_count, pos);
                     pos += line.len() as u64;
                 }
-                Err(e) => {
-                    error!("read error: {:?}", e)
-                }
+                Err(e) => error!("read error: {:?}", e),
             }
-        };
+        }
         return Ok(Moon {
             todo_writer: writer,
             line_count: line_count,
             config: cfg,
-            index_map: index_map
+            index_map: index_map,
         });
     }
 
@@ -98,9 +94,11 @@ impl Moon {
     }
 
     pub fn list(&mut self) {
-        let reader =  BufReader::new(OpenOptions::new()
-        .read(true)
-        .open(&self.config.todo_file).unwrap()
+        let reader = BufReader::new(
+            OpenOptions::new()
+                .read(true)
+                .open(&self.config.todo_file)
+                .unwrap(),
         );
 
         let mut idx = 1;
@@ -110,30 +108,44 @@ impl Moon {
                     println!("{} todo_content: {}, len:{}:", idx, line, line.len());
                     idx += 1;
                 }
-                Err(e) => {
-                    error!("read error: {:?}", e)
-                }
+                Err(e) => error!("read error: {:?}", e),
             }
-        };
+        }
         info!("[list cmd] index_map:{:?}", self.index_map);
     }
 
     pub fn del(&mut self, line_num: u64) {
-        let mut reader =  BufReader::new(OpenOptions::new()
-        .read(true)
-        .open(&self.config.todo_file).unwrap()
+        let reader = BufReader::new(
+            OpenOptions::new()
+                .read(true)
+                .open(&self.config.todo_file)
+                .unwrap(),
         );
-        self.config.set_bak(self.config.todo_file.clone());
+        let bak_todo = format!("{}{}", self.config.todo_file.to_str().unwrap(), ".bak");
+        info!("[del cmd]bak_todo_path: {}", bak_todo);
+        let mut bak_path = PathBuf::from(bak_todo);
+        let mut writer =OpenOptions::new()
+                .create(true)
+                .write(true).append(true)
+                .open(&bak_path)
+                .unwrap();
         for (idx, line) in reader.lines().enumerate() {
+            if (idx + 1) as u64 == line_num {
+                continue;
+            }
             match line {
                 Ok(line) => {
                     println!("todo content: {}", line);
+                    let content = format!("{}\n", line);
+                    writer.write(content.as_bytes()).unwrap();
                 }
                 Err(e) => {
                     error!("[del cmd] error: {:?}", e);
-                    self.config.set_bak_recover(self.config.todo_file.clone());
                 }
             }
         }
+        writer.flush().unwrap();
+        std::fs::remove_file(self.config.todo_file.clone());
+        std::fs::rename(bak_path, self.config.todo_file.clone());
     }
 }
