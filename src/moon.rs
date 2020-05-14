@@ -2,8 +2,9 @@ use crate::cfg::Config;
 use crate::consts::{CREATED_AT, DEFAULT_TODO_PRI_LEVEL, TODO_MESSAGE, TODO_PRI};
 use crate::error::Result;
 use std::collections::BTreeMap;
+use std::str;
 use std::fs::{File, OpenOptions};
-use std::io::{self, BufRead, BufReader, BufWriter, LineWriter, Seek, SeekFrom, Write};
+use std::io::{self, BufRead, BufReader, BufWriter, Read, Seek, SeekFrom, Write};
 extern crate chrono;
 
 use chrono::prelude::*;
@@ -114,7 +115,7 @@ impl Moon {
                 }
             }
         };
-        println!("index_map:{:?}", self.index_map)
+        info!("[list cmd] index_map:{:?}", self.index_map);
     }
 
     pub fn del(&mut self, line_num: u64) {
@@ -122,14 +123,17 @@ impl Moon {
         .read(true)
         .open(&self.config.todo_file).unwrap()
         );
-        let start_pos = self.index_map.get(&line_num).unwrap_or(&0);
-        let end_pos = self.index_map.get(&(line_num + 1)).unwrap_or(&0);
-        if start_pos == &0 || end_pos == &0 {
-            return 
-        };
-        reader.seek(SeekFrom::Start(*start_pos + 1));
-        let mut todo = String::new();
-        reader.read_line(&mut todo);
-        println!("todo content:{}", todo);
+        self.config.set_bak(self.config.todo_file.clone());
+        for (idx, line) in reader.lines().enumerate() {
+            match line {
+                Ok(line) => {
+                    println!("todo content: {}", line);
+                }
+                Err(e) => {
+                    error!("[del cmd] error: {:?}", e);
+                    self.config.set_bak_recover(self.config.todo_file.clone());
+                }
+            }
+        }
     }
 }

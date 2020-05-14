@@ -136,8 +136,9 @@ fn main() {
             
             match opt.del {
                 None => (),
-                Some(_) => {
-                    m.del(2)
+                Some(p) => {
+                    let line_num: u64 = p.parse().unwrap();
+                    m.del(line_num);
                 }
             }
         }

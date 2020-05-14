@@ -32,4 +32,16 @@ impl Config {
             done_file: done_file,
         };
     }
+
+    pub fn set_bak(&mut self, mut file_path: PathBuf) {
+        file_path.set_file_name((TODO_FILE.to_owned() + ".bak"));
+    }
+
+    pub fn set_bak_recover(&mut self, file_path: PathBuf) {
+        let bak = file_path.join(".bak");
+        let r = fs::rename(bak, file_path);
+        if r.is_err() {
+            error!("[Config set_bak] error:{:?}", r.err());}
+        
+    }
 }
