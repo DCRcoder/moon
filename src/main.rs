@@ -124,7 +124,7 @@ fn main() {
             match opt.add {
                 None => (),
                 Some(add) => {
-                    m.add(&add);
+                    m.add(&add, true);
                 }
             }
             match opt.list {
@@ -139,6 +139,14 @@ fn main() {
                 Some(p) => {
                     let line_num: u64 = p.parse().unwrap();
                     m.del(line_num);
+                }
+            }
+
+            match opt.done {
+                None => (),
+                Some(p) => {
+                    let line_num = p.parse().unwrap();
+                    m.done(line_num);
                 }
             }
         }

@@ -47,18 +47,26 @@ impl<W: Write + Seek> Seek for BufWriterWithPos<W> {
 pub struct Moon {
     pub config: Config,
     todo_writer: BufWriterWithPos<File>,
+    done_writer: BufWriterWithPos<File>,
     pub line_count: u64,
     index_map: BTreeMap<u64, u64>,
 }
 
 impl Moon {
     pub fn new(cfg: Config) -> Result<Moon> {
-        let writer = BufWriterWithPos::new(
+        let todo_writer = BufWriterWithPos::new(
             OpenOptions::new()
                 .create(true)
                 .write(true)
                 .append(true)
                 .open(&cfg.todo_file)?,
+        )?;
+        let done_writer = BufWriterWithPos::new(
+            OpenOptions::new()
+                .create(true)
+                .write(true)
+                .append(true)
+                .open(&cfg.done_file)?,
         )?;
         let reader = BufReader::new(OpenOptions::new().read(true).open(&cfg.todo_file)?);
         let mut line_count: u64 = 0;
@@ -75,14 +83,15 @@ impl Moon {
             }
         }
         return Ok(Moon {
-            todo_writer: writer,
+            todo_writer: todo_writer,
             line_count: line_count,
             config: cfg,
             index_map: index_map,
+            done_writer: done_writer,
         });
     }
 
-    pub fn add(&mut self, todo: &str) -> io::Result<usize> {
+    pub fn add(&mut self, todo: &str, is_todo: bool) -> io::Result<usize> {
         let local: DateTime<Local> = Local::now();
         let now = local.format("%Y-%m-%d %H:%M:%S").to_string();
         let content = todo.replace("\n", "");
@@ -90,7 +99,11 @@ impl Moon {
             "{}:{}|{}:{}|{}:{}\n",
             TODO_PRI, DEFAULT_TODO_PRI_LEVEL, TODO_MESSAGE, content, CREATED_AT, now
         );
-        return self.todo_writer.write(t.as_bytes());
+        if is_todo{
+            return self.todo_writer.write(t.as_bytes());
+        } {
+            return self.done_writer.write(t.as_bytes());
+        }
     }
 
     pub fn list(&mut self) {
@@ -147,5 +160,28 @@ impl Moon {
         writer.flush().unwrap();
         std::fs::remove_file(self.config.todo_file.clone());
         std::fs::rename(bak_path, self.config.todo_file.clone());
+    }
+
+    pub fn done(&mut self, line_num: u64) {
+        let reader = BufReader::new(
+            OpenOptions::new()
+                .read(true)
+                .open(&self.config.todo_file)
+                .unwrap(),
+        );
+        for (idx, line) in reader.lines().enumerate() {
+            if (idx + 1) as u64 == line_num {
+            match line {
+                Ok(line) => {
+                    println!("todo content: {}", line);
+                    self.add(&line, false);
+                    self.del((idx + 1) as u64);
+                }
+                Err(e) => {
+                    error!("[del cmd] error: {:?}", e);
+                }
+            }
+        }
+        }
     }
 }
