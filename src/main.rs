@@ -129,8 +129,8 @@ fn main() {
             }
             match opt.list {
                 None => (),
-                Some(_) => {
-                    m.list();
+                Some(p) => {
+                    m.list(&p);
                 }
             }
 

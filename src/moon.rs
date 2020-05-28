@@ -1,5 +1,5 @@
 use crate::cfg::{Config, TODO_FILE};
-use crate::consts::{CREATED_AT, DEFAULT_TODO_PRI_LEVEL, TODO_MESSAGE, TODO_PRI};
+use crate::consts::{CREATED_AT, DEFAULT_TODO_PRI_LEVEL, DONE_MESSAGE, TODO_MESSAGE, TODO_PRI};
 use crate::error::Result;
 use std::collections::BTreeMap;
 use std::fs::{File, OpenOptions};
@@ -95,22 +95,31 @@ impl Moon {
         let local: DateTime<Local> = Local::now();
         let now = local.format("%Y-%m-%d %H:%M:%S").to_string();
         let content = todo.replace("\n", "");
-        let t = format!(
-            "{}:{}|{}:{}|{}:{}\n",
-            TODO_PRI, DEFAULT_TODO_PRI_LEVEL, TODO_MESSAGE, content, CREATED_AT, now
-        );
-        if is_todo{
+        if is_todo {
+            let t = format!(
+                "{}:{}|{}:{}|{}:{}\n",
+                TODO_PRI, DEFAULT_TODO_PRI_LEVEL, TODO_MESSAGE, content, CREATED_AT, now
+            );
             return self.todo_writer.write(t.as_bytes());
-        } {
+        } else 
+        {
+            let t = format!("{}:{}|{}:{}\n", DONE_MESSAGE, content, CREATED_AT, now);
             return self.done_writer.write(t.as_bytes());
         }
     }
 
-    pub fn list(&mut self) {
+    pub fn list(&mut self, show: &str) {
+        let tmpp: PathBuf;
+        if show == "done" {
+            tmpp = self.config.done_file.clone();
+        } else {
+            tmpp = self.config.todo_file.clone();
+        }
+
         let reader = BufReader::new(
             OpenOptions::new()
                 .read(true)
-                .open(&self.config.todo_file)
+                .open(tmpp)
                 .unwrap(),
         );
 
@@ -118,13 +127,16 @@ impl Moon {
         for line in reader.lines() {
             match line {
                 Ok(line) => {
-                    println!("{} todo_content: {}, len:{}:", idx, line, line.len());
+                    if show == "todo" {
+                        info!("{} todo_content: {}, len:{}", idx, line, line.len());
+                    } else {
+                        info!("{} done_content: {}, len:{}", idx, line, line.len());
+                    }
                     idx += 1;
                 }
                 Err(e) => error!("read error: {:?}", e),
             }
         }
-        info!("[list cmd] index_map:{:?}", self.index_map);
     }
 
     pub fn del(&mut self, line_num: u64) {
@@ -137,11 +149,12 @@ impl Moon {
         let bak_todo = format!("{}{}", self.config.todo_file.to_str().unwrap(), ".bak");
         info!("[del cmd]bak_todo_path: {}", bak_todo);
         let mut bak_path = PathBuf::from(bak_todo);
-        let mut writer =OpenOptions::new()
-                .create(true)
-                .write(true).append(true)
-                .open(&bak_path)
-                .unwrap();
+        let mut writer = OpenOptions::new()
+            .create(true)
+            .write(true)
+            .append(true)
+            .open(&bak_path)
+            .unwrap();
         for (idx, line) in reader.lines().enumerate() {
             if (idx + 1) as u64 == line_num {
                 continue;
@@ -171,17 +184,17 @@ impl Moon {
         );
         for (idx, line) in reader.lines().enumerate() {
             if (idx + 1) as u64 == line_num {
-            match line {
-                Ok(line) => {
-                    println!("todo content: {}", line);
-                    self.add(&line, false);
-                    self.del((idx + 1) as u64);
-                }
-                Err(e) => {
-                    error!("[del cmd] error: {:?}", e);
+                match line {
+                    Ok(line) => {
+                        println!("todo content: {}", line);
+                        self.add(&line, false);
+                        self.del((idx + 1) as u64);
+                    }
+                    Err(e) => {
+                        error!("[del cmd] error: {:?}", e);
+                    }
                 }
             }
-        }
         }
     }
 }
