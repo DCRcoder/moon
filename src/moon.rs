@@ -1,9 +1,9 @@
-use crate::cfg::{Config, TODO_FILE};
+use crate::cfg::{Config};
 use crate::consts::{CREATED_AT, DEFAULT_TODO_PRI_LEVEL, DONE_MESSAGE, TODO_MESSAGE, TODO_PRI};
 use crate::error::Result;
 use std::collections::BTreeMap;
 use std::fs::{File, OpenOptions};
-use std::io::{self, BufRead, BufReader, BufWriter, LineWriter, Seek, SeekFrom, Write};
+use std::io::{self, BufRead, BufReader, BufWriter, Seek, SeekFrom, Write};
 use std::path::PathBuf;
 use std::str;
 extern crate chrono;
@@ -148,7 +148,7 @@ impl Moon {
         );
         let bak_todo = format!("{}{}", self.config.todo_file.to_str().unwrap(), ".bak");
         info!("[del cmd]bak_todo_path: {}", bak_todo);
-        let mut bak_path = PathBuf::from(bak_todo);
+        let bak_path = PathBuf::from(bak_todo);
         let mut writer = OpenOptions::new()
             .create(true)
             .write(true)
